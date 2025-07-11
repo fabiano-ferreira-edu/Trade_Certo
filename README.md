@@ -1,4 +1,4 @@
-# Sistema de Análise Probabilística de Ações
+# Sistema de Análise Probabilística de Ações 
 
 Uma aplicação web completa para análise probabilística de mercado de ações, permitindo simulação de estratégias de compra e venda baseadas em dados históricos.
 
