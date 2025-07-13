@@ -629,50 +629,63 @@ export function CSVUploader({ onUploadSuccess }: CSVUploaderProps) {
       }
     }
 
-    console.log('⏳ Aguardando 3 segundos para verificar resultados finais...');
+    console.log('⏳ Aguardando 1 segundo para verificar resultados finais...');
     // Wait a bit for all state updates to complete
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Check results after all processing is complete
     console.log('📊 Verificando resultados finais...');
     
-    // Get current state and calculate results
-    const currentFiles = selectedFiles;
-    const successCount = currentFiles.filter(f => f.status === 'success').length;
-    const errorCount = currentFiles.filter(f => f.status === 'error').length;
-    const processedAssets = currentFiles
-      .filter(f => f.status === 'success')
-      .map(f => f.assetCode);
-    
-    console.log(`📈 Resultados finais: ${successCount} sucessos, ${errorCount} erros`);
-    console.log(`📋 Ativos processados:`, processedAssets);
-
-    setIsUploading(false);
-
-    if (successCount > 0) {
-      // Show success modal
-      const summary: UploadSummary = {
-        totalFiles: currentFiles.length,
-        successCount,
-        errorCount,
-        processedAssets
-      };
+    // Force a state update to get the latest file statuses
+    setSelectedFiles(prev => {
+      const successCount = prev.filter(f => f.status === 'success').length;
+      const errorCount = prev.filter(f => f.status === 'error').length;
+      const processingCount = prev.filter(f => f.status === 'processing').length;
+      const pendingCount = prev.filter(f => f.status === 'pending').length;
+      const processedAssets = prev
+        .filter(f => f.status === 'success')
+        .map(f => f.assetCode);
       
-      console.log('🎉 Exibindo modal de sucesso:', summary);
-      setUploadSummary(summary);
-      setShowSuccessModal(true);
-      onUploadSuccess();
-    } else if (errorCount > 0) {
-      setUploadStatus({
-        type: 'error',
-        message: 'Nenhum arquivo foi processado com sucesso'
-      });
-    } else {
-      setUploadStatus({
-        type: 'error',
-        message: 'Processamento ainda em andamento ou status indefinido'
-      });
-    }
+      console.log(`📈 Status final: ${successCount} sucessos, ${errorCount} erros, ${processingCount} processando, ${pendingCount} pendentes`);
+      console.log(`📋 Ativos processados:`, processedAssets);
+      
+      // Set final status based on results
+      setTimeout(() => {
+        setIsUploading(false);
+        
+        if (successCount > 0) {
+          // Show success modal
+          const summary = {
+            totalFiles: prev.length,
+            successCount,
+            errorCount,
+            processedAssets
+          };
+          
+          console.log('🎉 Exibindo modal de sucesso:', summary);
+          setUploadSummary(summary);
+          setShowSuccessModal(true);
+          onUploadSuccess();
+        } else if (errorCount > 0) {
+          setUploadStatus({
+            type: 'error',
+            message: 'Nenhum arquivo foi processado com sucesso. Verifique os erros acima.'
+          });
+        } else if (processingCount > 0 || pendingCount > 0) {
+          setUploadStatus({
+            type: 'error',
+            message: 'Alguns arquivos ainda estão sendo processados. Aguarde ou tente novamente.'
+          });
+        } else {
+          setUploadStatus({
+            type: 'error',
+            message: 'Status indefinido. Tente fazer o upload novamente.'
+          });
+        }
+      }, 100);
+      
+      return prev;
+    });
   };
 
   const handleDrag = (e: React.DragEvent) => {
